@@ -1,3 +1,4 @@
+package matrixCalc;
 
 import java.util.Scanner;
 import java.io.*;
@@ -7,11 +8,11 @@ import java.io.*;
 **/
 public class Matrix {
 	// number of rows
-	private int n;
+	protected int n;
 	// number of columns
-	private int m;
+	protected int m;
 	// numbers
-	private double [][] numbers;
+	protected double [][] numbers;
 
 	/**
 	* Create a n x m matrix filled with zeros
@@ -100,11 +101,15 @@ public class Matrix {
 	/**
 	* Multiplies the matrix by a number.
 	* @param value double - number to multiply by.
+	* @return matrix - the result of multiplication
 	**/
-	public void multiplyBy(double value) {
+	public Matrix multiplyBy(double value) {
+		Matrix result = new Matrix(this.n, this.m);
 		for(int i = 0; i < this.n; i++)
 			for(int j = 0; j < this.m; j++)
-				this.numbers[i][j] *= value;
+				result.setNumber(i,j, numbers[i][j] * value);
+
+		return result;
 	}
 
 	/**
@@ -118,35 +123,35 @@ public class Matrix {
 	}
 
 	/**
-	* Returns a minor made of elements in rectangle between points x and y:
+	* Returns a submatrix made of elements in rectangle between points x and y:
 	* x coords are (xi, xj), y coords are (yi,ji)
-	* @param xi integer - vertical coordinate of left top corner of minor
-	* @param xj integer - horizontal coordinate of left top corner of minor
-	* @param yi integer - vertical coordinate of right bottom corner of minor
-	* @param yj integer - horizontal coordinate of right bottom corner of minor
+	* @param xi integer - vertical coordinate of left top corner of submatrix
+	* @param xj integer - horizontal coordinate of left top corner of submatrix
+	* @param yi integer - vertical coordinate of right bottom corner of submatrix
+	* @param yj integer - horizontal coordinate of right bottom corner of submatrix
 	* 
 	* @throws IllegalArgumentException if coords are out of bounds or can't make a rectangle between these points
-	* @return minor - a sub-matrix of the matrix
+	* @return submatrix - a sub-matrix of the matrix
 	**/
-	public Matrix getMinor(int xi, int xj, int yi, int yj) throws IllegalArgumentException {
+	public Matrix getSubmatrix(int xi, int xj, int yi, int yj) throws IllegalArgumentException {
 		if(xi >= yi || xj >= yj || xi < 0 || xj < 0 || yi < 0 || yj < 0)
-			throw new IllegalArgumentException("These coordinates doesn't make a minor");
+			throw new IllegalArgumentException("These coordinates doesn't make a submatrix");
 
-		int minorN = yi - xi;
-		int minorM = yj - xj;
+		int submatrixN = yi - xi;
+		int submatrixM = yj - xj;
 
-		Matrix minor = new Matrix(minorN, minorM);
+		Matrix submatrix = new Matrix(submatrixN, submatrixM);
 
 		/*
-		There i,j go through initial matrix, mi, mj go through minor
+		There i,j go through initial matrix, mi, mj go through submatrix
 		*/
 		int i = 0, mi = 0, j = 0, mj = 0;
-		for(i = xi, mi = 0; i < yi && mi < minorN; i++, mi++) {
-			for(j = xj, mj = 0; j < yj && mj < minorM; j++, mj++) {
-				minor.numbers[mi][mj] = this.numbers[i][j];
+		for(i = xi, mi = 0; i < yi && mi < submatrixN; i++, mi++) {
+			for(j = xj, mj = 0; j < yj && mj < submatrixM; j++, mj++) {
+				submatrix.numbers[mi][mj] = this.numbers[i][j];
 			}
 		}
-		return minor;
+		return submatrix;
 	}
 
 	/**
@@ -333,29 +338,29 @@ public class Matrix {
 	}
 
 	/**
-	* Gets cofactor of an element with supported indexes
+	* Gets minor of an element with specified indexes
 	* @param i vertical index
 	* @param j horizontal index
 	* @throws IllegalArgumentException if one of indexes is out of bounds
-	* @return matrix - cofactor of an element
+	* @return matrix - minor of an element
 	**/
-	public Matrix getCofactor(int i, int j) throws IllegalArgumentException {
+	public Matrix getMinor(int i, int j) throws IllegalArgumentException {
 		if(i < 0 || i > this.n || j < 0 || j > this.m)
 			throw new IllegalArgumentException("One of indexes is out of bounds!");
 
-		Matrix cofactor = new Matrix(this.n - 1, this.m - 1);
+		Matrix minor = new Matrix(this.n - 1, this.m - 1);
 		int ii, ci, jj, cj;
 		for(ii = 0, ci = 0; ii < this.n; ii++) {
 			if(ii == i) continue;
 			for(jj = 0, cj = 0; jj < this.m; jj++) {
 				if(jj == j) continue;
-				cofactor.setNumber(ci, cj, numbers[ii][jj]);
+				minor.setNumber(ci, cj, numbers[ii][jj]);
 				cj++;
 			}
 			ci++;
 		}
 
-		return cofactor;
+		return minor;
 	}
 
 	/**
@@ -372,11 +377,64 @@ public class Matrix {
 		else {
 			double det = 0;
 			for(int i = 0; i < this.m; i++) {
-				if(i % 2 == 0) det += numbers[0][i] * this.getCofactor(0, i).det();
-				else det -= numbers[0][i] * this.getCofactor(0,i).det();
+				if(i % 2 == 0) det += numbers[0][i] * this.getMinor(0, i).det();
+				else det -= numbers[0][i] * this.getMinor(0,i).det();
 			}
 			return det;
 		}
+	}
+
+
+	/**
+	* @return true if matrix is invertible, else false
+	**/
+	public boolean isInvertible() {
+		if(!isSquare())
+			return false;
+		else if (det() == 0)
+			return false;
+		else return true;
+	}
+
+	/**
+	* Returns a cofactor matrix
+	* @return matrix made of cofactor
+	* @throws UnsupportedOperationException if matrix isn't square
+	**/
+
+	public Matrix getCofactorMatrix() throws UnsupportedOperationException {
+		if(!isSquare())
+			throw new UnsupportedOperationException("Can't calculate cofactor matrix for not square matrix!");
+		Matrix cofactorMatrix = new Matrix(this.n, this.m);
+		for(int i = 0; i < this.n; i++) {
+			for(int j = 0; j < this.m; j++) {
+				cofactorMatrix.setNumber(i,j, (this.getMinor(i,j).det() * Math.pow(-1, (i+j))));
+			}
+		}
+		return cofactorMatrix;
+	}
+
+	/**
+	* Gets adjugate matrix for this matrix
+	* @return adjugate matrix
+	* @throws UnsupportedOperationException if matrix isn't square
+	**/
+	public Matrix getAdjugateMatrix() throws UnsupportedOperationException {
+		if(!isSquare())
+			throw new UnsupportedOperationException("Can't get adjugate from not square matrix!");
+
+		return this.getCofactorMatrix().transpose();
+	}
+
+	/**
+	* Gets an inversve matrix of this matrix
+	* @return inverse matrix
+	* @throws UnsupportedOperationException if matrix isn't invertible
+	**/
+	public Matrix getInverse() throws UnsupportedOperationException {
+		if(!isSquare() || !isInvertible())
+			throw new UnsupportedOperationException("Matrix is not invertible!");
+		else return this.getAdjugateMatrix().multiplyBy(1 / this.det());
 	}
 
 
@@ -395,6 +453,4 @@ public class Matrix {
 		}
 		return matrix;
 	}
-
-
 }
